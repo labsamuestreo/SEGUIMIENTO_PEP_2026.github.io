@@ -3,71 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte NOVLABSA</title>
+    <title>Reporte Personalizado NOVLABSA</title>
     <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Roboto', sans-serif; margin: 10px; background-color: #f4f4f9; }
-        .contenedor-tabla { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow-x: auto; }
-        table { border-collapse: collapse; width: 100%; min-width: 1400px; table-layout: fixed; }
+        .contenedor-tabla { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow-x: auto; height: 88vh; }
         
-        .h-morado { background: #CC66FF; color: white; font-family: 'Montserrat'; font-size: 7.5pt; font-weight: bold; text-align: center; border: 0.5pt solid #fff; padding: 10px 2px; }
-        .h-gris { background: #ADADAD; color: white; font-family: 'Montserrat'; font-size: 7.5pt; font-weight: bold; text-align: center; border: 0.5pt solid #fff; }
+        table { border-collapse: collapse; width: 100%; min-width: 2400px; table-layout: fixed; }
+        
+        thead th { position: sticky; top: 0; z-index: 10; }
+        .h-morado { background: #CC66FF; color: white; font-family: 'Montserrat'; font-size: 7pt; font-weight: bold; text-align: center; border: 0.5pt solid #fff; padding: 10px 2px; }
+        .h-azul { background: #4472C4; color: white; font-family: 'Montserrat'; font-size: 7pt; border: 0.5pt solid #fff; }
 
-        .celda { font-size: 8pt; color: #000; text-align: center; vertical-align: middle; border: 0.5pt solid #ccc; padding: 6px 3px; word-wrap: break-word; }
-        .izquierda { text-align: left; padding-left: 8px; }
+        .celda { font-size: 7.5pt; color: #000; text-align: center; vertical-align: middle; border: 0.5pt solid #ccc; padding: 4px 2px; word-wrap: break-word; }
+        .izquierda { text-align: left; padding-left: 5px; }
         
+        /* Colores de Matriz */
         .matriz-suelo { background-color: #FFC000 !important; font-weight: bold; }
-        .demora-morado { background-color: #7030A0 !important; color: white !important; font-weight: bold; }
+        .matriz-agua { background-color: #00B0F0 !important; color: white !important; font-weight: bold; }
+        
+        .demora-morado { background-color: #7030A0 !important; color: white !important; }
         .status-rojo { background-color: #FF0000 !important; color: white !important; font-weight: bold; }
         .status-verde { background-color: #28a745 !important; color: white !important; font-weight: bold; }
+        .resaltado-final { background-color: #D9EAD3; font-weight: bold; }
+
         #mensaje { color: #7030A0; font-weight: bold; text-align: center; margin: 10px; }
     </style>
 </head>
 <body>
 
 <div class="contenedor-tabla">
-    <div id="mensaje">Cargando datos...</div>
+    <div id="mensaje">Generando reporte dinámico...</div>
     <table id="tabla-novlabsa" style="display:none;">
-        <thead>
-            <tr>
-                <th class="h-morado" style="width: 30px;">No.</th>
-                <th class="h-morado" style="width: 70px;">OTM</th>
-                <th class="h-gris"   style="width: 170px;">Razón social</th>
-                <th class="h-morado" style="width: 180px;">Sitio de muestreo</th>
-                <th class="h-morado" style="width: 85px;">F. Muestreo</th>
-                <th class="h-morado" style="width: 85px;">F. Ingreso</th>
-                <th class="h-morado" style="width: 60px;">Matriz</th>
-                <th class="h-morado" style="width: 60px;">Muestras</th>
-                <th class="h-morado" style="width: 200px;">Parámetros</th>
-                <th class="h-morado" style="width: 60px;">Demora</th>
-                <th class="h-morado" style="width: 70px;">Entregado</th>
-            </tr>
-        </thead>
+        <thead id="cabecera-generada"></thead>
         <tbody id="cuerpo-tabla"></tbody>
     </table>
 </div>
 
 <script>
-    const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIJI6LlRVJeFDAZhLdb6VDu72yf1x39lbzYlh_JgX8UzES8RPWWklLoDPINWAqggRQ6hXllOKC6Y9K/pub?output=csv";
+    const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIJI6LlRVJeFDAZhLdb6VDu72yf1x39lbzYlh_JgX8UzES8RPWWklLoDPINWAqggRQ6hXllOKC6Y9K/pub?output=csv" + "&cachebust=" + new Date().getTime();
+
+    // Índices solicitados: A-AC (0-28), AI (34), AP (41)
+    const indicesAMostrar = [];
+    for(let i=0; i<=28; i++) indicesAMostrar.push(i);
+    indicesAMostrar.push(34); // AI
+    indicesAMostrar.push(41); // AP
 
     async function cargarDatos() {
         try {
             const respuesta = await fetch(URL_CSV);
-            if (!respuesta.ok) throw new Error("Error de red");
+            if (!respuesta.ok) throw new Error("Error de conexión");
             const contenido = await respuesta.text();
 
             Papa.parse(contenido, {
                 header: false,
                 skipEmptyLines: true,
                 complete: function(resultado) {
+                    generarEncabezados(resultado.data[0]);
                     renderizarTabla(resultado.data);
                 }
             });
         } catch (error) {
-            document.getElementById('mensaje').innerHTML = "Error de CORS detectado. Usa Live Server.";
+            document.getElementById('mensaje').innerHTML = "Error de carga. Por favor usa Live Server.";
         }
+    }
+
+    function generarEncabezados(titulos) {
+        const thead = document.getElementById('cabecera-generada');
+        let htmlHeader = "<tr>";
+        indicesAMostrar.forEach(idx => {
+            let nombreCol = titulos[idx] || `Col ${idx+1}`;
+            let clase = (idx < 17) ? "h-morado" : "h-azul";
+            let ancho = "80px";
+            if (idx === 0) ancho = "35px";
+            if (idx === 3 || idx === 4) ancho = "180px";
+            if (idx === 9) ancho = "220px";
+            if (idx >= 17 && idx <= 24) ancho = "45px";
+
+            htmlHeader += `<th class="${clase}" style="width: ${ancho};">${nombreCol}</th>`;
+        });
+        htmlHeader += "</tr>";
+        thead.innerHTML = htmlHeader;
     }
 
     function renderizarTabla(filas) {
@@ -76,33 +94,44 @@
         document.getElementById('tabla-novlabsa').style.display = 'table';
         tablaBody.innerHTML = ""; 
 
-        // Empezamos en 1 para saltar encabezados
         for (let i = 1; i < filas.length; i++) {
             const c = filas[i];
-            
-            // FILTRO: Si la columna OTM (c[1]) y Razón Social (c[3]) están vacías, no mostrar la fila
-            if (!c[1] || c[1].trim() === "" || !c[3] || c[3].trim() === "") {
-                continue; 
-            }
+            if (!c[1] || c[1].trim() === "" || c[1] === "-1") continue;
 
             const tr = document.createElement('tr');
+            
+            // Lógica para color de Entregado
             const entregado = (c[16] || "").trim().toUpperCase();
-            let claseEntregado = (entregado === "NO") ? "status-rojo" : 
-                                 (entregado === "SI" || entregado === "SÍ") ? "status-verde" : "";
+            let claseEntregado = (entregado === "NO") ? "status-rojo" : (entregado === "SI" || entregado === "SÍ") ? "status-verde" : "";
 
-            tr.innerHTML = `
-                <td class="celda">${c[0] || ''}</td>
-                <td class="celda">${c[1] || ''}</td>
-                <td class="celda izquierda">${c[3] || ''}</td>
-                <td class="celda izquierda">${c[4] || ''}</td>
-                <td class="celda">${c[5] || ''}</td>
-                <td class="celda">${c[6] || ''}</td>
-                <td class="celda matriz-suelo">${c[7] || ''}</td>
-                <td class="celda">${c[8] || ''}</td>
-                <td class="celda izquierda" style="font-size: 7pt;">${c[9] || ''}</td>
-                <td class="celda demora-morado">${c[15] || ''}</td>
-                <td class="celda ${claseEntregado}">${c[16] || ''}</td>
-            `;
+            let htmlFila = "";
+            indicesAMostrar.forEach(j => {
+                let valor = c[j] || '';
+                let clasesCelda = "celda";
+                
+                // Formatear porcentajes en columnas de avance
+                if (valor !== "" && !isNaN(valor) && valor > 0 && valor < 1 && j >= 28) {
+                    valor = (parseFloat(valor) * 100).toFixed(0) + "%";
+                }
+
+                // Alineación y Estilos Especiales
+                if ([3, 4, 9].includes(j)) clasesCelda += " izquierda";
+                
+                // LÓGICA DE MATRIZ (Columna 7)
+                if (j === 7) {
+                    const matrizTexto = valor.toLowerCase();
+                    if (matrizTexto.includes("suelo")) clasesCelda += " matriz-suelo";
+                    else if (matrizTexto.includes("agua")) clasesCelda += " matriz-agua";
+                }
+
+                if (j === 15) clasesCelda += " demora-morado";
+                if (j === 16) clasesCelda += " " + claseEntregado;
+                if (j >= 34) clasesCelda += " resaltado-final";
+
+                htmlFila += `<td class="${clasesCelda}">${valor}</td>`;
+            });
+            
+            tr.innerHTML = htmlFila;
             tablaBody.appendChild(tr);
         }
     }
