@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte NOVLABSA </title>
+    <title>Reporte NOVLABSA - Vista Optimizada</title>
     <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
@@ -27,7 +27,7 @@
         /* Estilos de Status */
         .status-rojo { background-color: #FF0000 !important; color: white !important; font-weight: bold; }
         .status-verde { background-color: #28a745 !important; color: white !important; font-weight: bold; }
-        .resaltado-final { background-color: #D9EAD3; font-weight: bold; }
+        .resaltado-final { background-color: #66cf40; font-weight: bold; }
 
         #mensaje { color: #7030A0; font-weight: bold; text-align: center; margin: 10px; }
     </style>
@@ -132,7 +132,7 @@
                 if (j === 16) clasesCelda += " " + claseEntregado;
                 
                 // Columnas finales (Índice 34 en adelante)
-                if (j >= 34) clasesCelda += " resaltado-final";
+                if (j === 28 || j === 41) clasesCelda += " resaltado-final";
 
                 htmlFila += `<td class="${clasesCelda}">${valor}</td>`;
             });
