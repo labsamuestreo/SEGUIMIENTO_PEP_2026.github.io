@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte Personalizado NOVLABSA</title>
+    <title>Reporte NOVLABSA - Vista Optimizada</title>
     <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
@@ -20,11 +20,11 @@
         .celda { font-size: 7.5pt; color: #000; text-align: center; vertical-align: middle; border: 0.5pt solid #ccc; padding: 4px 2px; word-wrap: break-word; }
         .izquierda { text-align: left; padding-left: 5px; }
         
-        /* Colores de Matriz */
+        /* Colores Matriz */
         .matriz-suelo { background-color: #FFC000 !important; font-weight: bold; }
         .matriz-agua { background-color: #00B0F0 !important; color: white !important; font-weight: bold; }
         
-        .demora-morado { background-color: #7030A0 !important; color: white !important; }
+        /* Estilos de Status */
         .status-rojo { background-color: #FF0000 !important; color: white !important; font-weight: bold; }
         .status-verde { background-color: #28a745 !important; color: white !important; font-weight: bold; }
         .resaltado-final { background-color: #D9EAD3; font-weight: bold; }
@@ -35,7 +35,7 @@
 <body>
 
 <div class="contenedor-tabla">
-    <div id="mensaje">Generando reporte dinámico...</div>
+    <div id="mensaje">Sincronizando datos...</div>
     <table id="tabla-novlabsa" style="display:none;">
         <thead id="cabecera-generada"></thead>
         <tbody id="cuerpo-tabla"></tbody>
@@ -45,16 +45,16 @@
 <script>
     const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIJI6LlRVJeFDAZhLdb6VDu72yf1x39lbzYlh_JgX8UzES8RPWWklLoDPINWAqggRQ6hXllOKC6Y9K/pub?output=csv" + "&cachebust=" + new Date().getTime();
 
-    // Índices solicitados: A-AC (0-28), AI (34), AP (41)
+    // Columnas A-AC (0-28), AI (34), AP (41)
     const indicesAMostrar = [];
     for(let i=0; i<=28; i++) indicesAMostrar.push(i);
-    indicesAMostrar.push(34); // AI
-    indicesAMostrar.push(41); // AP
+    indicesAMostrar.push(34); 
+    indicesAMostrar.push(41); 
 
     async function cargarDatos() {
         try {
             const respuesta = await fetch(URL_CSV);
-            if (!respuesta.ok) throw new Error("Error de conexión");
+            if (!respuesta.ok) throw new Error("Error de red");
             const contenido = await respuesta.text();
 
             Papa.parse(contenido, {
@@ -66,7 +66,7 @@
                 }
             });
         } catch (error) {
-            document.getElementById('mensaje').innerHTML = "Error de carga. Por favor usa Live Server.";
+            document.getElementById('mensaje').innerHTML = "Error de conexión. Asegúrate de usar Live Server.";
         }
     }
 
@@ -76,10 +76,7 @@
         indicesAMostrar.forEach(idx => {
             let nombreCol = titulos[idx] || `Col ${idx+1}`;
             let clase = (idx < 17) ? "h-morado" : "h-azul";
-            let ancho = "80px";
-            if (idx === 0) ancho = "35px";
-            if (idx === 3 || idx === 4) ancho = "180px";
-            if (idx === 9) ancho = "220px";
+            let ancho = (idx === 3 || idx === 4) ? "180px" : (idx === 9) ? "220px" : (idx === 0) ? "35px" : "80px";
             if (idx >= 17 && idx <= 24) ancho = "45px";
 
             htmlHeader += `<th class="${clase}" style="width: ${ancho};">${nombreCol}</th>`;
@@ -96,6 +93,8 @@
 
         for (let i = 1; i < filas.length; i++) {
             const c = filas[i];
+            
+            // Validar que la fila tenga datos en OTM
             if (!c[1] || c[1].trim() === "" || c[1] === "-1") continue;
 
             const tr = document.createElement('tr');
@@ -109,23 +108,30 @@
                 let valor = c[j] || '';
                 let clasesCelda = "celda";
                 
-                // Formatear porcentajes en columnas de avance
+                // 1. Filtro Días de demora (Índice 15): No mostrar -1
+                if (j === 15 && valor.toString().trim() === "-1") {
+                    valor = "";
+                }
+
+                // 2. Formato de porcentajes (Avances)
                 if (valor !== "" && !isNaN(valor) && valor > 0 && valor < 1 && j >= 28) {
                     valor = (parseFloat(valor) * 100).toFixed(0) + "%";
                 }
 
-                // Alineación y Estilos Especiales
-                if ([3, 4, 9].includes(j)) clasesCelda += " izquierda";
-                
-                // LÓGICA DE MATRIZ (Columna 7)
+                // 3. Estilos de Matriz (Índice 7)
                 if (j === 7) {
-                    const matrizTexto = valor.toLowerCase();
-                    if (matrizTexto.includes("suelo")) clasesCelda += " matriz-suelo";
-                    else if (matrizTexto.includes("agua")) clasesCelda += " matriz-agua";
+                    const txt = valor.toLowerCase();
+                    if (txt.includes("suelo")) clasesCelda += " matriz-suelo";
+                    else if (txt.includes("agua")) clasesCelda += " matriz-agua";
                 }
 
-                if (j === 15) clasesCelda += " demora-morado";
+                // 4. Alineación y Colores Especiales
+                if ([3, 4, 9].includes(j)) clasesCelda += " izquierda";
+                
+                // Columna Entregado (Índice 16)
                 if (j === 16) clasesCelda += " " + claseEntregado;
+                
+                // Columnas finales (Índice 34 en adelante)
                 if (j >= 34) clasesCelda += " resaltado-final";
 
                 htmlFila += `<td class="${clasesCelda}">${valor}</td>`;
