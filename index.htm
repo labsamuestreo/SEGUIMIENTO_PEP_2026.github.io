@@ -3,39 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte NOVLABSA</title>
+    <title>Reporte NOVLABSA - Fidelidad Visual</title>
     <script src="https://unpkg.com/papaparse@5.3.2/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Roboto', sans-serif; margin: 10px; background-color: #f4f4f9; }
-        .contenedor-tabla { background: white; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow-x: auto; height: 88vh; }
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            margin: 0; 
+            padding: 15px;
+            background-color: #343a40; 
+        }
+
+        .contenedor-tabla { 
+            background: #ffffff; 
+            padding: 10px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            overflow-x: auto; 
+            height: 90vh; 
+        }
         
-        table { border-collapse: collapse; width: 100%; min-width: 2400px; table-layout: fixed; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            min-width: 3200px; 
+            table-layout: fixed; 
+        }
         
         thead th { position: sticky; top: 0; z-index: 10; }
-        .h-morado { background: #CC66FF; color: white; font-family: 'Montserrat'; font-size: 7pt; font-weight: bold; text-align: center; border: 0.5pt solid #fff; padding: 10px 2px; }
-        .h-azul { background: #4472C4; color: white; font-family: 'Montserrat'; font-size: 7pt; border: 0.5pt solid #fff; }
-
-        .celda { font-size: 7.5pt; color: #000; text-align: center; vertical-align: middle; border: 0.5pt solid #ccc; padding: 4px 2px; word-wrap: break-word; }
-        .izquierda { text-align: left; padding-left: 5px; }
         
-        /* Colores Matriz */
-        .matriz-suelo { background-color: #FFC000 !important; font-weight: bold; }
+        .h-morado { 
+            background: #CC66FF; color: white; font-family: 'Montserrat'; 
+            font-size: 7.5pt; font-weight: bold; text-align: center; 
+            border: 1px solid #fff; padding: 12px 4px;
+        }
+        
+        .h-azul { 
+            background: #4472C4; color: white; font-family: 'Montserrat'; 
+            font-size: 7.5pt; font-weight: bold;
+            border: 1px solid #fff; padding: 12px 4px;
+        }
+
+        .celda { 
+            font-size: 8pt; color: #000; text-align: center; 
+            vertical-align: middle; border: 1px solid #dee2e6; 
+            padding: 6px 3px; word-wrap: break-word; background: #fff;
+        }
+
+        /* --- ESTILOS DE VALIDACIÓN --- */
+
+        /* Matriz (Columna K / Índice 10) */
+        .matriz-suelo { background-color: #FFC000 !important; font-weight: bold; color: #000 !important; }
         .matriz-agua { background-color: #00B0F0 !important; color: white !important; font-weight: bold; }
         
-        /* Estilos de Status */
-        .status-rojo { background-color: #FF0000 !important; color: white !important; font-weight: bold; }
-        .status-verde { background-color: #28a745 !important; color: white !important; font-weight: bold; }
-        .resaltado-final { background-color: #66cf40; font-weight: bold; }
+        /* Entregado (Columna T / Índice 19) */
+        .status-no { background-color: #FF0000 !important; color: white !important; font-weight: bold; }
+        .status-si { background-color: #28a745 !important; color: white !important; font-weight: bold; }
+        
+        /* FECHA POR INGRESAR (Columna J / Índice 9) */
+        /* Forzamos el borde rojo y texto rojo como pediste */
+        .fecha-pendiente { 
+            outline: 2px solid #FF0000 !important; /* Usamos outline para que el borde no se pierda entre celdas */
+            border: 2px solid #FF0000 !important;
+            color: #FF0000 !important; 
+            font-weight: bold !important;
+        }
 
-        #mensaje { color: #7030A0; font-weight: bold; text-align: center; margin: 10px; }
+        /* Resaltados OTM y Razón Social */
+        .resaltado-verde { background-color: #92D050 !important; font-weight: bold; }
+
+        #mensaje { color: white; font-family: 'Montserrat'; text-align: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
+<div id="mensaje">Sincronizando Reporte NOVLABSA...</div>
+
 <div class="contenedor-tabla">
-    <div id="mensaje">Sincronizando datos...</div>
     <table id="tabla-novlabsa" style="display:none;">
         <thead id="cabecera-generada"></thead>
         <tbody id="cuerpo-tabla"></tbody>
@@ -45,18 +90,14 @@
 <script>
     const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIJI6LlRVJeFDAZhLdb6VDu72yf1x39lbzYlh_JgX8UzES8RPWWklLoDPINWAqggRQ6hXllOKC6Y9K/pub?output=csv" + "&cachebust=" + new Date().getTime();
 
-    // Columnas A-AC (0-28), AI (34), AP (41)
+    // Rango A a AE (0 a 30)
     const indicesAMostrar = [];
-    for(let i=0; i<=28; i++) indicesAMostrar.push(i);
-    indicesAMostrar.push(34); 
-    indicesAMostrar.push(41); 
+    for(let i=0; i<=30; i++) indicesAMostrar.push(i);
 
     async function cargarDatos() {
         try {
             const respuesta = await fetch(URL_CSV);
-            if (!respuesta.ok) throw new Error("Error de red");
             const contenido = await respuesta.text();
-
             Papa.parse(contenido, {
                 header: false,
                 skipEmptyLines: true,
@@ -66,7 +107,7 @@
                 }
             });
         } catch (error) {
-            document.getElementById('mensaje').innerHTML = "Error de conexión. Asegúrate de usar Live Server.";
+            document.getElementById('mensaje').innerHTML = "Error al cargar datos.";
         }
     }
 
@@ -75,9 +116,14 @@
         let htmlHeader = "<tr>";
         indicesAMostrar.forEach(idx => {
             let nombreCol = titulos[idx] || `Col ${idx+1}`;
-            let clase = (idx < 17) ? "h-morado" : "h-azul";
-            let ancho = (idx === 3 || idx === 4) ? "180px" : (idx === 9) ? "220px" : (idx === 0) ? "35px" : "80px";
-            if (idx >= 17 && idx <= 24) ancho = "45px";
+            // Según tu Excel, el bloque morado termina en la columna 19 (Entregado)
+            let clase = (idx <= 19) ? "h-morado" : "h-azul";
+            
+            let ancho = "100px";
+            if (idx === 0) ancho = "40px";
+            if (idx === 6) ancho = "250px"; // Razón Social
+            if (idx === 7) ancho = "250px"; // Sitio
+            if (idx === 12) ancho = "280px"; // Parámetros
 
             htmlHeader += `<th class="${clase}" style="width: ${ancho};">${nombreCol}</th>`;
         });
@@ -87,52 +133,49 @@
 
     function renderizarTabla(filas) {
         const tablaBody = document.getElementById('cuerpo-tabla');
-        document.getElementById('mensaje').style.display = 'none';
         document.getElementById('tabla-novlabsa').style.display = 'table';
+        document.getElementById('mensaje').style.display = 'none';
         tablaBody.innerHTML = ""; 
 
         for (let i = 1; i < filas.length; i++) {
             const c = filas[i];
-            
-            // Validar que la fila tenga datos en OTM
-            if (!c[1] || c[1].trim() === "" || c[1] === "-1") continue;
+            // Validar OTM en columna E (Índice 4)
+            if (!c[4] || c[4].trim() === "" || c[4] === "-1") continue;
 
             const tr = document.createElement('tr');
-            
-            // Lógica para color de Entregado
-            const entregado = (c[16] || "").trim().toUpperCase();
-            let claseEntregado = (entregado === "NO") ? "status-rojo" : (entregado === "SI" || entregado === "SÍ") ? "status-verde" : "";
-
             let htmlFila = "";
+
             indicesAMostrar.forEach(j => {
-                let valor = c[j] || '';
-                let clasesCelda = "celda";
-                
-                // 1. Filtro Días de demora (Índice 15): No mostrar -1
-                if (j === 15 && valor.toString().trim() === "-1") {
-                    valor = "";
+                let valor = (c[j] || '').toString().trim();
+                let clasesCelda = "celda"; 
+
+                // 1. Matriz (Índice 10)
+                if (j === 10) { 
+                    if (valor.toLowerCase().includes("suelo")) clasesCelda += " matriz-suelo";
+                    if (valor.toLowerCase().includes("agua")) clasesCelda += " matriz-agua";
                 }
 
-                // 2. Formato de porcentajes (Avances)
-                if (valor !== "" && !isNaN(valor) && valor > 0 && valor < 1 && j >= 28) {
-                    valor = (parseFloat(valor) * 100).toFixed(0) + "%";
+                // 2. Fecha de ingreso (Índice 9) -> TEXTO "Por Ingresar"
+                if (j === 9 && valor.toLowerCase().includes("ingresar")) {
+                    clasesCelda += " fecha-pendiente";
                 }
 
-                // 3. Estilos de Matriz (Índice 7)
-                if (j === 7) {
-                    const txt = valor.toLowerCase();
-                    if (txt.includes("suelo")) clasesCelda += " matriz-suelo";
-                    else if (txt.includes("agua")) clasesCelda += " matriz-agua";
+                // 3. Entregado (Índice 19)
+                if (j === 19) {
+                    if (valor.toUpperCase() === "NO") clasesCelda += " status-no";
+                    if (valor.toUpperCase() === "SI" || valor.toUpperCase() === "SÍ") clasesCelda += " status-si";
                 }
 
-                // 4. Alineación y Colores Especiales
-                if ([3, 4, 9].includes(j)) clasesCelda += " izquierda";
+                // 4. Avances (Índices 1, 2, 3)
+                if ((j >= 1 && j <= 3) && valor !== "" && !isNaN(valor) && valor > 0 && valor <= 1) {
+                    valor = Math.round(parseFloat(valor) * 100) + "%";
+                }
+
+                // 5. Resaltado OTM (4) y Razón Social (6)
+                if (j === 1 || j === 3) clasesCelda += " resaltado-verde";
                 
-                // Columna Entregado (Índice 16)
-                if (j === 16) clasesCelda += " " + claseEntregado;
-                
-                // Columnas finales (Índice 34 en adelante)
-                if (j === 28 || j === 41) clasesCelda += " resaltado-final";
+                // Limpiar basura
+                if (valor === "-1") valor = "";
 
                 htmlFila += `<td class="${clasesCelda}">${valor}</td>`;
             });
